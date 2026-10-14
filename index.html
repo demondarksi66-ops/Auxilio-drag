@@ -1,0 +1,730 @@
+<!DOCTYPE html>
+<html lang="es" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>8ZENX SENSI DRAG</title>
+    
+    <!-- Configuración PWA -->
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#0b0b0e">
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('sw.js').catch(() => {});
+            });
+        }
+    </script>
+
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        darkBg: '#0b0b0e',
+                        cardBg: '#15151a',
+                        cardBorder: '#272730',
+                        brandRed: '#ff1a38',
+                        subtext: '#9ca3af',
+                        platinumText: '#e5e7eb'
+                    }
+                }
+            }
+        }
+    </script>
+    
+    <!-- FontAwesome & Fonts -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+
+    <!-- Firebase SDKs -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+        import { getDatabase, ref, get, push } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyA-iZZ4rcZTfr67eoWovjRGpO-6o12HLqc",
+            authDomain: "auxilio-d3df9.firebaseapp.com",
+            projectId: "auxilio-d3df9",
+            storageBucket: "auxilio-d3df9.firebasestorage.app",
+            messagingSenderId: "836682928817",
+            appId: "1:836682928817:web:d6c6ef1b875bb067498890",
+            measurementId: "G-EQKDSQCD2B"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getDatabase(app);
+
+        window.verificarAccesoFirebase = async function() {
+            const emailInput = document.getElementById('firebase-email').value.trim().toLowerCase();
+            const statusText = document.getElementById('firebase-status');
+
+            if (!emailInput || !emailInput.includes('@')) {
+                statusText.innerText = "Por favor ingresa un correo válido.";
+                statusText.className = "text-[10px] font-bold text-red-500 mt-2";
+                return;
+            }
+
+            statusText.innerText = "Verificando acceso...";
+            statusText.className = "text-[10px] font-bold text-yellow-500 mt-2";
+
+            try {
+                const userKey = emailInput.replace(/\./g, '_');
+                const userRef = ref(db, 'Usuarios/' + userKey);
+                const snapshot = await get(userRef);
+
+                if (snapshot.exists()) {
+                    const userData = snapshot.val();
+                    if (userData.activo === true) {
+                        const accessRef = ref(db, 'Registros_Acceso');
+                        push(accessRef, {
+                            email: emailInput,
+                            fecha: new Date().toISOString(),
+                            dispositivo: navigator.userAgent
+                        });
+
+                        statusText.innerText = "¡Acceso concedido! Entrando...";
+                        statusText.className = "text-[10px] font-bold text-green-500 mt-2";
+                        
+                        setTimeout(() => {
+                            document.getElementById('auth-modal').style.display = 'none';
+                            document.getElementById('app-container').classList.remove('hidden');
+                        }, 1000);
+                    } else {
+                        statusText.innerText = "Tu cuenta está desactivada.";
+                        statusText.className = "text-[10px] font-bold text-red-500 mt-2";
+                    }
+                } else {
+                    statusText.innerText = "Correo no registrado en el sistema.";
+                    statusText.className = "text-[10px] font-bold text-red-500 mt-2";
+                }
+            } catch (error) {
+                statusText.innerText = "Error de conexión con la base de datos.";
+                statusText.className = "text-[10px] font-bold text-red-500 mt-2";
+            }
+        };
+    </script>
+
+    <style>
+        * { box-sizing: border-box; }
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #0b0b0e;
+            color: #f3f4f6;
+            margin: 0;
+            padding: 0;
+            width: 100vw;
+            min-height: 100vh;
+            overflow-x: hidden;
+            -webkit-tap-highlight-color: transparent;
+            user-select: none;
+        }
+
+        .custom-scrollbar::-webkit-scrollbar { width: 3px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: #0b0b0e; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #272730; border-radius: 3px; }
+
+        .toggle-bg { transition: background-color 0.2s ease, border-color 0.2s ease; }
+        .toggle-dot { transition: transform 0.2s ease; }
+
+        .nav-btn.active {
+            color: #ff1a38;
+            background-color: #1e1518;
+            border-left: 3px solid #ff1a38;
+            box-shadow: inset 0 0 10px rgba(255, 26, 56, 0.15);
+        }
+
+        .hz-btn.active {
+            background-color: #ff1a38;
+            color: #ffffff;
+            font-weight: 800;
+            box-shadow: 0 0 10px rgba(255, 26, 56, 0.5);
+        }
+
+        .res-card.active {
+            border-color: #ff1a38;
+            background-color: #1e1518;
+            box-shadow: 0 0 12px rgba(255, 26, 56, 0.25);
+        }
+
+        .bg-grid {
+            background-image: radial-gradient(circle at 50% 0%, rgba(255, 26, 56, 0.08) 0%, transparent 70%);
+        }
+    </style>
+</head>
+<body class="flex items-center justify-center bg-grid">
+
+    <!-- MODAL DE AUTENTICACIÓN FIREBASE -->
+    <div id="auth-modal" class="fixed inset-0 z-50 bg-[#0b0b0e]/95 backdrop-blur-md flex items-center justify-center p-4">
+        <div class="w-full max-w-sm bg-cardBg border border-cardBorder rounded-2xl p-5 shadow-2xl text-center space-y-4">
+            <div class="w-12 h-12 bg-brandRed/10 border border-brandRed/30 rounded-xl flex items-center justify-center text-brandRed mx-auto">
+                <i class="fa-solid fa-shield-halved text-xl"></i>
+            </div>
+            <div>
+                <h2 class="text-sm font-black text-platinumText uppercase tracking-wider">Verificación VIP</h2>
+                <p class="text-[10px] text-subtext mt-1">Ingresa tu correo autorizado para acceder al panel</p>
+            </div>
+            <div class="space-y-2">
+                <input type="email" id="firebase-email" placeholder="tucorreo@gmail.com" class="w-full px-3 py-2.5 bg-black border border-cardBorder rounded-xl text-xs text-white text-center focus:border-brandRed outline-none transition-all">
+                <button onclick="verificarAccesoFirebase()" class="w-full py-2.5 bg-brandRed text-white rounded-xl text-xs font-bold uppercase tracking-widest shadow-lg hover:brightness-110 transition-all">Verificar Acceso</button>
+            </div>
+            <p id="firebase-status" class="text-[10px] font-medium text-subtext"></p>
+        </div>
+    </div>
+
+    <!-- MAIN APP CONTAINER -->
+    <div id="app-container" class="hidden w-full min-h-screen sm:max-w-md sm:h-[850px] bg-darkBg sm:rounded-3xl border-0 sm:border border-cardBorder shadow-2xl flex flex-col relative overflow-hidden">
+        
+        <!-- TOP STATUS HEADER -->
+        <header class="pt-4 px-4 pb-3 border-b border-cardBorder bg-[#111116]/95 backdrop-blur-md sticky top-0 z-30 flex flex-col items-center">
+            
+            <div class="w-full flex items-center justify-between mb-2">
+                <div></div>
+                <h1 class="text-base font-black tracking-tight text-white flex items-center gap-1.5 font-sans">
+                    <i class="fa-solid fa-crosshairs text-brandRed text-sm"></i>
+                    8ZENX SENSI DRAG
+                </h1>
+                <button class="text-subtext hover:text-white text-xs"><i class="fa-solid fa-xmark text-sm"></i></button>
+            </div>
+
+            <div class="flex items-center gap-2 mb-2">
+                <div class="bg-cardBg border border-cardBorder px-3 py-1 rounded-md flex items-center gap-1.5">
+                    <span class="text-[9px] font-bold text-subtext uppercase tracking-wider">EXPIRA EN :</span>
+                    <span class="text-[10px] font-extrabold text-green-500 tracking-wider">PERMANENTE</span>
+                </div>
+            </div>
+
+            <div class="text-[10px] font-bold text-subtext flex items-center gap-1">
+                <span>VERSION :</span>
+                <span class="text-brandRed bg-brandRed/10 border border-brandRed/30 px-1.5 py-0.2 rounded text-[9px]">v5</span>
+            </div>
+        </header>
+
+        <div class="flex-1 flex overflow-hidden w-full">
+            
+            <!-- SIDEBAR -->
+            <nav class="w-14 bg-[#0e0e12] border-r border-cardBorder/80 flex flex-col items-center py-3 space-y-3 z-20 flex-shrink-0">
+                <button onclick="switchTab('punteria')" id="tab-btn-punteria" class="nav-btn active w-10 h-10 rounded-xl flex items-center justify-center text-subtext hover:text-white transition-all"><i class="fa-solid fa-crosshairs text-base"></i></button>
+                <button onclick="switchTab('fps')" id="tab-btn-fps" class="nav-btn w-10 h-10 rounded-xl flex items-center justify-center text-subtext hover:text-white transition-all"><i class="fa-solid fa-bolt text-base"></i></button>
+                <button onclick="switchTab('resistencia')" id="tab-btn-resistencia" class="nav-btn w-10 h-10 rounded-xl flex items-center justify-center text-subtext hover:text-white transition-all"><i class="fa-solid fa-shield-halved text-base"></i></button>
+                <button onclick="switchTab('pro')" id="tab-btn-pro" class="nav-btn w-10 h-10 rounded-xl flex items-center justify-center text-subtext hover:text-white transition-all"><i class="fa-solid fa-fire text-base"></i></button>
+                <button onclick="switchTab('inyeccion')" id="tab-btn-inyeccion" class="nav-btn w-10 h-10 rounded-xl flex items-center justify-center text-subtext hover:text-white transition-all"><i class="fa-solid fa-circle-dot text-base"></i></button>
+                <button onclick="switchTab('regedit')" id="tab-btn-regedit" class="nav-btn w-10 h-10 rounded-xl flex items-center justify-center text-subtext hover:text-white transition-all"><i class="fa-solid fa-sliders text-base"></i></button>
+                <button onclick="switchTab('setedit')" id="tab-btn-setedit" class="nav-btn w-10 h-10 rounded-xl flex items-center justify-center text-subtext hover:text-white transition-all"><i class="fa-brands fa-android text-base"></i></button>
+                <button onclick="switchTab('dns')" id="tab-btn-dns" class="nav-btn w-10 h-10 rounded-xl flex items-center justify-center text-subtext hover:text-white transition-all"><i class="fa-solid fa-globe text-base"></i></button>
+                <button onclick="switchTab('obb')" id="tab-btn-obb" class="nav-btn w-10 h-10 rounded-xl flex items-center justify-center text-subtext hover:text-white transition-all"><i class="fa-solid fa-download text-base"></i></button>
+                <button onclick="switchTab('social')" id="tab-btn-social" class="nav-btn w-10 h-10 rounded-xl flex items-center justify-center text-subtext hover:text-white transition-all"><i class="fa-solid fa-share-nodes text-base"></i></button>
+
+                <div class="mt-auto pb-2 flex flex-col items-center gap-1">
+                    <div class="flex gap-1">
+                        <span class="w-1.5 h-1.5 rounded-full bg-blue-400"></span>
+                        <span class="w-1.5 h-1.5 rounded-full bg-pink-400"></span>
+                        <span class="w-1.5 h-1.5 rounded-full bg-yellow-400"></span>
+                    </div>
+                </div>
+            </nav>
+
+            <!-- MAIN CONTENT -->
+            <main class="flex-1 overflow-y-auto p-3.5 space-y-3 custom-scrollbar w-0">
+                
+                <!-- TAB 1: PUNTERÍA -->
+                <div id="tab-punteria" class="tab-page space-y-3">
+                    <div class="flex items-start gap-2.5 mb-1">
+                        <div class="w-8 h-8 rounded-lg bg-brandRed/10 border border-brandRed/30 flex items-center justify-center text-brandRed mt-0.5 flex-shrink-0">
+                            <i class="fa-solid fa-crosshairs text-sm"></i>
+                        </div>
+                        <div>
+                            <h2 class="text-xs font-bold text-platinumText uppercase tracking-wide">Control de Puntería FF</h2>
+                            <p class="text-[10px] text-subtext leading-tight mt-0.5">Precisión extrema, estabilidad total y seguimiento automático para Free Fire</p>
+                        </div>
+                    </div>
+
+                    <div class="p-3 bg-cardBg border border-cardBorder rounded-xl flex items-center justify-between">
+                        <div class="pr-2 flex items-start gap-2.5">
+                            <i class="fa-solid fa-hand-pointer text-brandRed text-sm mt-1"></i>
+                            <div>
+                                <h3 class="text-xs font-bold text-platinumText">Control del retroceso</h3>
+                                <p class="text-[10px] text-subtext">Reduce 100% el retroceso en Free Fire</p>
+                            </div>
+                        </div>
+                        <button onclick="toggleSwitch('recoil')" id="btn-recoil" class="toggle-bg relative inline-flex h-5 w-10 flex-shrink-0 cursor-pointer rounded-full border border-cardBorder bg-[#0f0f13] transition-all">
+                            <span id="dot-recoil" class="toggle-dot pointer-events-none inline-block h-4 w-4 transform rounded-full bg-subtext shadow translate-x-0.5 translate-y-0.5"></span>
+                        </button>
+                    </div>
+
+                    <div class="p-3 bg-cardBg border border-cardBorder rounded-xl flex items-center justify-between">
+                        <div class="pr-2 flex items-start gap-2.5">
+                            <i class="fa-solid fa-bullseye text-brandRed text-sm mt-1"></i>
+                            <div>
+                                <h3 class="text-xs font-bold text-platinumText">Aimbot Legit FF</h3>
+                                <p class="text-[10px] text-subtext">Seguimiento automático de enemigos en FF</p>
+                            </div>
+                        </div>
+                        <button onclick="toggleSwitch('aimbot')" id="btn-aimbot" class="toggle-bg relative inline-flex h-5 w-10 flex-shrink-0 cursor-pointer rounded-full border border-cardBorder bg-[#0f0f13] transition-all">
+                            <span id="dot-aimbot" class="toggle-dot pointer-events-none inline-block h-4 w-4 transform rounded-full bg-subtext shadow translate-x-0.5 translate-y-0.5"></span>
+                        </button>
+                    </div>
+
+                    <div class="p-3 bg-cardBg border border-cardBorder rounded-xl flex items-center justify-between">
+                        <div class="pr-2 flex items-start gap-2.5">
+                            <i class="fa-solid fa-crosshairs text-brandRed text-sm mt-1"></i>
+                            <div>
+                                <h3 class="text-xs font-bold text-platinumText">Precisión Absoluta</h3>
+                                <p class="text-[10px] text-subtext">100% precisión en headshots de FF</p>
+                            </div>
+                        </div>
+                        <button onclick="toggleSwitch('precision')" id="btn-precision" class="toggle-bg relative inline-flex h-5 w-10 flex-shrink-0 cursor-pointer rounded-full border border-cardBorder bg-[#0f0f13] transition-all">
+                            <span id="dot-precision" class="toggle-dot pointer-events-none inline-block h-4 w-4 transform rounded-full bg-subtext shadow translate-x-0.5 translate-y-0.5"></span>
+                        </button>
+                    </div>
+
+                    <div class="p-3 bg-cardBg border border-cardBorder rounded-xl flex items-center justify-between">
+                        <div class="pr-2 flex items-start gap-2.5">
+                            <i class="fa-solid fa-shield-halved text-brandRed text-sm mt-1"></i>
+                            <div>
+                                <h3 class="text-xs font-bold text-platinumText">Anti-Detección FF</h3>
+                                <p class="text-[10px] text-subtext">Bypass total anti-cheat de Free Fire</p>
+                            </div>
+                        </div>
+                        <button onclick="toggleSwitch('antidetect')" id="btn-antidetect" class="toggle-bg relative inline-flex h-5 w-10 flex-shrink-0 cursor-pointer rounded-full border border-brandRed bg-brandRed transition-all">
+                            <span id="dot-antidetect" class="toggle-dot pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow translate-x-5 translate-y-0.5"></span>
+                        </button>
+                    </div>
+
+                    <div class="p-3 bg-cardBg border border-cardBorder rounded-xl flex items-center justify-between">
+                        <div class="pr-2 flex items-start gap-2.5">
+                            <i class="fa-solid fa-eye text-brandRed text-sm mt-1"></i>
+                            <div>
+                                <h3 class="text-xs font-bold text-platinumText">Campo Visual (FOV) FF</h3>
+                                <p class="text-[10px] text-subtext">Amplía visión en Free Fire hasta 120°</p>
+                            </div>
+                        </div>
+                        <button onclick="toggleSwitch('fov')" id="btn-fov" class="toggle-bg relative inline-flex h-5 w-10 flex-shrink-0 cursor-pointer rounded-full border border-cardBorder bg-[#0f0f13] transition-all">
+                            <span id="dot-fov" class="toggle-dot pointer-events-none inline-block h-4 w-4 transform rounded-full bg-subtext shadow translate-x-0.5 translate-y-0.5"></span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- TAB 2: FPS -->
+                <div id="tab-fps" class="tab-page hidden space-y-3">
+                    <div class="flex items-start gap-2.5 mb-1">
+                        <div class="w-8 h-8 rounded-lg bg-brandRed/10 border border-brandRed/30 flex items-center justify-center text-brandRed mt-0.5 flex-shrink-0">
+                            <i class="fa-solid fa-bolt text-sm"></i>
+                        </div>
+                        <div>
+                            <h2 class="text-xs font-bold text-platinumText uppercase tracking-wide">Rendimiento FF Máximo</h2>
+                            <p class="text-[10px] text-subtext leading-tight mt-0.5">Optimiza FPS, latencia y recursos para Free Fire al 100%</p>
+                        </div>
+                    </div>
+
+                    <div class="p-3 bg-cardBg border border-cardBorder rounded-xl flex items-center justify-between">
+                        <div>
+                            <h3 class="text-xs font-bold text-platinumText">Booster de FPS</h3>
+                            <p class="text-[10px] text-subtext">Activo - 9 fps detectados</p>
+                        </div>
+                        <button onclick="toggleSwitch('fpsbooster')" id="btn-fpsbooster" class="toggle-bg relative inline-flex h-5 w-10 flex-shrink-0 cursor-pointer rounded-full border border-brandRed bg-brandRed transition-all">
+                            <span id="dot-fpsbooster" class="toggle-dot pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow translate-x-5 translate-y-0.5"></span>
+                        </button>
+                    </div>
+
+                    <div class="p-3 bg-cardBg border border-cardBorder rounded-xl flex items-center justify-between">
+                        <div>
+                            <h3 class="text-xs font-bold text-platinumText">Reducción de Ping</h3>
+                            <p class="text-[10px] text-subtext">Activa para desconectar servidores</p>
+                        </div>
+                        <button onclick="toggleSwitch('pingred')" id="btn-pingred" class="toggle-bg relative inline-flex h-5 w-10 flex-shrink-0 cursor-pointer rounded-full border border-brandRed bg-brandRed transition-all">
+                            <span id="dot-pingred" class="toggle-dot pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow translate-x-5 translate-y-0.5"></span>
+                        </button>
+                    </div>
+
+                    <div class="p-3 bg-cardBg border border-cardBorder rounded-xl flex items-center justify-between">
+                        <div>
+                            <h3 class="text-xs font-bold text-platinumText">Anti-Lag Ultra FF</h3>
+                            <p class="text-[10px] text-subtext">Elimina lag en Free Fire</p>
+                        </div>
+                        <button onclick="toggleSwitch('antilag')" id="btn-antilag" class="toggle-bg relative inline-flex h-5 w-10 flex-shrink-0 cursor-pointer rounded-full border border-brandRed bg-brandRed transition-all">
+                            <span id="dot-antilag" class="toggle-dot pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow translate-x-5 translate-y-0.5"></span>
+                        </button>
+                    </div>
+
+                    <div class="p-3 bg-cardBg border border-cardBorder rounded-xl flex items-center justify-between">
+                        <div>
+                            <h3 class="text-xs font-bold text-platinumText">GPU Boost FF</h3>
+                            <p class="text-[10px] text-subtext">Aceleración GPU máxima para Free Fire</p>
+                        </div>
+                        <button onclick="toggleSwitch('gpuboost')" id="btn-gpuboost" class="toggle-bg relative inline-flex h-5 w-10 flex-shrink-0 cursor-pointer rounded-full border border-brandRed bg-brandRed transition-all">
+                            <span id="dot-gpuboost" class="toggle-dot pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow translate-x-5 translate-y-0.5"></span>
+                        </button>
+                    </div>
+
+                    <div class="p-3 bg-cardBg border border-cardBorder rounded-xl space-y-2">
+                        <div class="flex justify-between items-center">
+                            <div>
+                                <h3 class="text-xs font-bold text-platinumText">Tasa de Hercios FF</h3>
+                                <p class="text-[10px] text-subtext">Hasta 144 Hz para Free Fire</p>
+                            </div>
+                            <span id="current-hz-badge" class="text-[10px] font-bold text-white bg-brandRed/20 border border-brandRed/50 px-2 py-0.5 rounded">60 Hz</span>
+                        </div>
+                        <div class="grid grid-cols-4 gap-1.5 pt-1">
+                            <button onclick="setHz(60)" id="hz-60" class="hz-btn active py-1.5 rounded bg-[#101014] border border-cardBorder text-[10px] text-subtext font-bold">60 Hz</button>
+                            <button onclick="setHz(90)" id="hz-90" class="hz-btn py-1.5 rounded bg-[#101014] border border-cardBorder text-[10px] text-subtext font-bold">90 Hz</button>
+                            <button onclick="setHz(120)" id="hz-120" class="hz-btn py-1.5 rounded bg-[#101014] border border-cardBorder text-[10px] text-subtext font-bold">120 Hz</button>
+                            <button onclick="setHz(144)" id="hz-144" class="hz-btn py-1.5 rounded bg-[#101014] border border-cardBorder text-[10px] text-subtext font-bold">144 Hz</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- TAB 3: RESISTENCIA -->
+                <div id="tab-resistencia" class="tab-page hidden space-y-3">
+                    <div class="flex items-start gap-2.5 mb-1">
+                        <div class="w-8 h-8 rounded-lg bg-brandRed/10 border border-brandRed/30 flex items-center justify-center text-brandRed mt-0.5 flex-shrink-0">
+                            <i class="fa-solid fa-shield-halved text-sm"></i>
+                        </div>
+                        <div>
+                            <h2 class="text-xs font-bold text-platinumText uppercase tracking-wide">Resistencia FF</h2>
+                            <p class="text-[10px] text-subtext leading-tight mt-0.5">Ajusta la sensibilidad al movimiento para Free Fire</p>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 gap-2.5">
+                        <div onclick="setResistencia('corto')" id="res-corto" class="res-card p-3.5 bg-cardBg border border-cardBorder rounded-xl cursor-pointer text-center space-y-1">
+                            <div class="w-2.5 h-2.5 rounded-full bg-brandRed mx-auto"></div>
+                            <h3 class="text-xs font-bold text-platinumText uppercase">Corto</h3>
+                            <p class="text-[10px] text-subtext">Movimientos rápidos en FF</p>
+                        </div>
+
+                        <div onclick="setResistencia('medio')" id="res-medio" class="res-card active p-3.5 bg-cardBg border border-cardBorder rounded-xl cursor-pointer text-center space-y-1">
+                            <div class="w-2.5 h-2.5 rounded-full bg-brandRed mx-auto"></div>
+                            <h3 class="text-xs font-bold text-platinumText uppercase">Medio</h3>
+                            <p class="text-[10px] text-subtext">Balance perfecto para Free Fire</p>
+                        </div>
+
+                        <div onclick="setResistencia('long')" id="res-long" class="res-card p-3.5 bg-cardBg border border-cardBorder rounded-xl cursor-pointer text-center space-y-1">
+                            <div class="w-2.5 h-2.5 rounded-full bg-brandRed mx-auto"></div>
+                            <h3 class="text-xs font-bold text-platinumText uppercase">Long</h3>
+                            <p class="text-[10px] text-subtext">Control total en Free Fire</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- TAB 4: MODO PRO -->
+                <div id="tab-pro" class="tab-page hidden space-y-3">
+                    <div class="flex items-start gap-2.5 mb-1">
+                        <div class="w-8 h-8 rounded-lg bg-brandRed/10 border border-brandRed/30 flex items-center justify-center text-brandRed mt-0.5 flex-shrink-0">
+                            <i class="fa-solid fa-fire text-sm"></i>
+                        </div>
+                        <div>
+                            <h2 class="text-xs font-bold text-platinumText uppercase tracking-wide">Modo Pro FF</h2>
+                            <p class="text-[10px] text-subtext leading-tight mt-0.5">Montaje profesional completo para Free Fire</p>
+                        </div>
+                    </div>
+
+                    <div class="p-3 bg-cardBg border border-cardBorder rounded-xl flex items-center justify-between">
+                        <div>
+                            <h3 class="text-xs font-bold text-platinumText">Paquete Pro FF</h3>
+                            <p class="text-[10px] text-subtext">Activa todas las funciones avanzadas para Free Fire</p>
+                        </div>
+                        <button onclick="toggleSwitch('paquetepro')" id="btn-paquetepro" class="toggle-bg relative inline-flex h-5 w-10 flex-shrink-0 cursor-pointer rounded-full border border-cardBorder bg-[#0f0f13] transition-all">
+                            <span id="dot-paquetepro" class="toggle-dot pointer-events-none inline-block h-4 w-4 transform rounded-full bg-subtext shadow translate-x-0.5 translate-y-0.5"></span>
+                        </button>
+                    </div>
+
+                    <div class="p-3 bg-cardBg border border-cardBorder rounded-xl flex items-center justify-between">
+                        <div>
+                            <h3 class="text-xs font-bold text-platinumText">Puntería Estable FF</h3>
+                            <p class="text-[10px] text-subtext">Estabilización máxima en Free Fire</p>
+                        </div>
+                        <button onclick="toggleSwitch('punteriaestable')" id="btn-punteriaestable" class="toggle-bg relative inline-flex h-5 w-10 flex-shrink-0 cursor-pointer rounded-full border border-cardBorder bg-[#0f0f13] transition-all">
+                            <span id="dot-punteriaestable" class="toggle-dot pointer-events-none inline-block h-4 w-4 transform rounded-full bg-subtext shadow translate-x-0.5 translate-y-0.5"></span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- TAB 5: INYECCIÓN -->
+                <div id="tab-inyeccion" class="tab-page hidden space-y-4 text-center py-4">
+                    <div class="flex items-center justify-center gap-2 mb-1">
+                        <i class="fa-solid fa-circle-dot text-brandRed"></i>
+                        <h2 class="text-xs font-bold text-platinumText uppercase tracking-wide">Control de Inyección</h2>
+                    </div>
+                    <p class="text-[10px] text-subtext">Selecciona el juego para inyectar y abrir automáticamente</p>
+
+                    <div class="space-y-2.5 pt-2">
+                        <a href="intent://#Intent;package=com.dts.freefireth;scheme=freefire;end;" class="w-full py-3 bg-cardBg hover:bg-brandRed border border-brandRed rounded-xl font-black text-xs text-white tracking-widest uppercase transition-all shadow-lg flex items-center justify-center gap-2">
+                            <i class="fa-solid fa-radiation text-sm"></i>
+                            <span>ABRIR / INYECTAR EN FF</span>
+                        </a>
+
+                        <a href="intent://#Intent;package=com.dts.freefiremax;scheme=freefiremax;end;" class="w-full py-3 bg-cardBg hover:bg-brandRed border border-brandRed/60 rounded-xl font-black text-xs text-white tracking-widest uppercase transition-all shadow-lg flex items-center justify-center gap-2">
+                            <i class="fa-solid fa-bolt text-sm"></i>
+                            <span>ABRIR / INYECTAR EN FF MAX</span>
+                        </a>
+                    </div>
+                </div>
+
+                <!-- TAB 6: REGEDIT -->
+                <div id="tab-regedit" class="tab-page hidden space-y-3">
+                    <div class="flex items-start gap-2.5 mb-1">
+                        <div class="w-8 h-8 rounded-lg bg-brandRed/10 border border-brandRed/30 flex items-center justify-center text-brandRed mt-0.5 flex-shrink-0">
+                            <i class="fa-solid fa-sliders text-sm"></i>
+                        </div>
+                        <div>
+                            <h2 class="text-xs font-bold text-platinumText uppercase tracking-wide">Editor de Registro</h2>
+                            <p class="text-[10px] text-subtext leading-tight mt-0.5">Modifica los parámetros del sistema para máximo rendimiento</p>
+                        </div>
+                    </div>
+
+                    <div class="space-y-2 pt-1">
+                        <button class="w-full py-2.5 bg-cardBg border border-cardBorder rounded-xl text-xs font-bold text-platinumText hover:border-brandRed flex items-center justify-center gap-2">
+                            <i class="fa-solid fa-gear text-brandRed text-xs"></i>
+                            <span>MODO GENERAL</span>
+                        </button>
+                        <button class="w-full py-2.5 bg-cardBg border border-cardBorder rounded-xl text-xs font-bold text-platinumText hover:border-brandRed flex items-center justify-center gap-2">
+                            <i class="fa-solid fa-bolt text-brandRed text-xs"></i>
+                            <span>RENDIMIENTO</span>
+                        </button>
+                        <button class="w-full py-2.5 bg-cardBg border border-cardBorder rounded-xl text-xs font-bold text-platinumText hover:border-brandRed flex items-center justify-center gap-2">
+                            <i class="fa-solid fa-wrench text-brandRed text-xs"></i>
+                            <span>AVANZADO</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- TAB 7: SET EDIT V4 -->
+                <div id="tab-setedit" class="tab-page hidden space-y-3">
+                    <div class="flex items-start gap-2.5 mb-1">
+                        <div class="w-8 h-8 rounded-lg bg-brandRed/10 border border-brandRed/30 flex items-center justify-center text-brandRed mt-0.5 flex-shrink-0">
+                            <i class="fa-brands fa-android text-sm"></i>
+                        </div>
+                        <div>
+                            <h2 class="text-xs font-bold text-platinumText uppercase tracking-wide">Set Edit V4</h2>
+                            <p class="text-[10px] text-subtext leading-tight mt-0.5">Códigos, APK y tutorial de activación para Free Fire</p>
+                        </div>
+                    </div>
+
+                    <div class="space-y-3">
+                        <div class="p-3 bg-cardBg border border-cardBorder rounded-xl space-y-2">
+                            <div class="flex items-center justify-between">
+                                <span class="text-xs font-bold text-brandRed">CÓDIGOS SET EDIT V4</span>
+                                <span class="text-[9px] text-subtext">Toca para copiar</span>
+                            </div>
+                            <div id="setedit-codes-box" class="w-full h-32 bg-black/60 border border-cardBorder rounded-lg p-2.5 text-[10px] font-mono text-emerald-400 overflow-y-auto select-all whitespace-pre-wrap">settings put global window_animation_scale 0.5
+settings put global transition_animation_scale 0.5
+settings put global animator_duration_scale 0.4
+pm trim-caches 999G
+settings put secure long_press_timeout 150
+settings put secure multi_press_timeout 100
+settings put system touch_precision_mode 1
+settings put global input_boost_enabled 1
+settings put global touch_boost 1
+settings put system peak_refresh_rate 60.0
+settings put system min_refresh_rate 60.0
+settings put system fling_velocity_min 500
+settings put system fling_velocity_max 12000
+settings put system touch.pressure.scale 0.003
+settings put system touch.size.scale 1.0
+settings put system show_touches 0
+am force-stop com.google.android.apps.photos
+am force-stop com.android.chrome</div>
+                            <button onclick="copiarCodigosSetEdit()" class="w-full py-2.5 bg-brandRed text-white rounded-xl text-xs font-bold uppercase tracking-wider shadow-lg hover:brightness-110 transition-all flex items-center justify-center gap-2">
+                                <i class="fa-solid fa-copy"></i> COPIAR CÓDIGOS SET EDIT V4
+                            </button>
+                        </div>
+
+                        <button class="w-full py-2.5 bg-cardBg border border-cardBorder rounded-xl text-xs font-bold text-platinumText hover:border-brandRed flex items-center justify-center gap-2">
+                            <i class="fa-solid fa-download text-brandRed text-xs"></i>
+                            <span>APK SET EDIT PRO</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- TAB 8: DNS -->
+                <div id="tab-dns" class="tab-page hidden space-y-3">
+                    <div class="flex items-start gap-2.5 mb-1">
+                        <div class="w-8 h-8 rounded-lg bg-brandRed/10 border border-brandRed/30 flex items-center justify-center text-brandRed mt-0.5 flex-shrink-0">
+                            <i class="fa-solid fa-globe text-sm"></i>
+                        </div>
+                        <div>
+                            <h2 class="text-xs font-bold text-platinumText uppercase tracking-wide">DNS Ultimate</h2>
+                            <p class="text-[10px] text-subtext leading-tight mt-0.5">Configuración optimizada de red para Free Fire</p>
+                        </div>
+                    </div>
+
+                    <div class="p-3 bg-cardBg border border-cardBorder rounded-xl space-y-1.5 text-[11px] text-subtext">
+                        <h3 class="text-xs font-bold text-brandRed">INFORMACIÓN DNS</h3>
+                        <p>1. Es un perfil de gestión que modifica ajustes internos del sistema para reducir el ping y mejorar la latencia táctil.</p>
+                    </div>
+                </div>
+
+                <!-- TAB 9: OBB -->
+                <div id="tab-obb" class="tab-page hidden space-y-3">
+                    <div class="flex items-start gap-2.5 mb-1">
+                        <div class="w-8 h-8 rounded-lg bg-brandRed/10 border border-brandRed/30 flex items-center justify-center text-brandRed mt-0.5 flex-shrink-0">
+                            <i class="fa-solid fa-download text-sm"></i>
+                        </div>
+                        <div>
+                            <h2 class="text-xs font-bold text-platinumText uppercase tracking-wide">OBB HS Legit ( Android )</h2>
+                            <p class="text-[10px] text-subtext leading-tight mt-0.5">Optimización avanzada de sensibilidad para Android</p>
+                        </div>
+                    </div>
+
+                    <div class="p-3 bg-cardBg border border-cardBorder rounded-xl space-y-2">
+                        <h3 class="text-xs font-bold text-brandRed flex items-center gap-1.5">
+                            <i class="fa-solid fa-shield-halved"></i> PASOS DE INSTALACIÓN
+                        </h3>
+                        <p class="text-[10px] text-subtext leading-relaxed">
+                            Para descargar este OBB es necesario tener FREE FIRE MAX, ZArchiver y reemplazar los archivos originales.
+                        </p>
+                        <a href="https://www.mediafire.com/file/mbepr4kxmcoauq1/OBB+AUXILIO.zip/file" target="_blank" class="w-full py-2.5 bg-brandRed text-white rounded-lg text-xs font-bold flex items-center justify-center gap-2 shadow-lg hover:brightness-110 transition-all">
+                            <i class="fa-solid fa-download"></i> DESCARGAR OBB HS FF MAX
+                        </a>
+                    </div>
+                </div>
+
+                <!-- TAB 10: REDES SOCIALES -->
+                <div id="tab-social" class="tab-page hidden space-y-3">
+                    <div class="flex items-start gap-2.5 mb-1">
+                        <div class="w-8 h-8 rounded-lg bg-brandRed/10 border border-brandRed/30 flex items-center justify-center text-brandRed mt-0.5 flex-shrink-0">
+                            <i class="fa-solid fa-share-nodes text-sm"></i>
+                        </div>
+                        <div>
+                            <h2 class="text-xs font-bold text-platinumText uppercase tracking-wide">Comunidad & Redes</h2>
+                            <p class="text-[10px] text-subtext leading-tight mt-0.5">Sigue los canales oficiales de Sensi 8zenx</p>
+                        </div>
+                    </div>
+
+       class="tab-page hidden space-y-3">
+                    <div class="flex items-start gap-2.5 mb-1">
+                        <div class="w-8 h-8 rounded-lg bg-brandRed/10 border border-brandRed/30 flex items-center justify-center text-brandRed mt-0.5 flex-shrink-0">
+                            <i class="fa-solid fa-share-nodes text-sm"></i>
+                        </div>
+                        <div>
+                            <h2 class="text-xs font-bold text-platinumText uppercase tracking-wide">Comunidad & Redes</h2>
+                            <p class="text-[10px] text-subtext leading-tight mt-0.5">Sigue los canales oficiales de Sensi 8zenx</p>
+                        </div>
+                    </div>
+
+                    <a href="https://www.tiktok.com/@Suecoxz" target="_blank" class="p-3.5 bg-cardBg border border-cardBorder hover:border-brandRed rounded-xl flex items-center justify-between transition-all group">
+                        <div class="flex items-center gap-3">
+                            <div class="w-9 h-9 rounded-lg bg-black border border-cardBorder flex items-center justify-center text-white text-base group-hover:text-brandRed transition-colors flex-shrink-0">
+                                <i class="fa-brands fa-tiktok"></i>
+                            </div>
+                            <div>
+                                <h3 class="text-xs font-bold text-white">TikTok Oficial</h3>
+                                <p class="text-[10px] text-subtext">@Suecoxz</p>
+                            </div>
+                        </div>
+                        <i class="fa-solid fa-arrow-right text-subtext text-xs group-hover:text-white flex-shrink-0"></i>
+                    </a>
+
+                    <a href="https://whatsapp.com/channel/0029Vb75RIE8qJ00JdX4vw2H" target="_blank" class="p-3.5 bg-cardBg border border-cardBorder hover:border-green-500 rounded-xl flex items-center justify-between transition-all group">
+                        <div class="flex items-center gap-3">
+                            <div class="w-9 h-9 rounded-lg bg-green-500/10 border border-green-500/30 flex items-center justify-center text-green-500 text-base flex-shrink-0">
+                                <i class="fa-brands fa-whatsapp"></i>
+                            </div>
+                            <div>
+                                <h3 class="text-xs font-bold text-white">Canal de WhatsApp</h3>
+                                <p class="text-[10px] text-subtext">Sigue el canal de Sensi 8zenx</p>
+                            </div>
+                        </div>
+                        <i class="fa-solid fa-arrow-right text-subtext text-xs group-hover:text-white flex-shrink-0"></i>
+                    </a>
+                </div>
+
+            </main>
+        </div>
+    </div>
+
+    <!-- NOTIFICACIÓN TOAST FLOTANTE -->
+    <div id="toast" class="fixed bottom-5 left-1/2 transform -translate-x-1/2 bg-brandRed text-white text-xs font-bold px-4 py-2 rounded-xl shadow-2xl transition-all duration-300 opacity-0 pointer-events-none z-50">
+        ¡Códigos copiados con éxito!
+    </div>
+
+    <!-- SCRIPTS -->
+    <script>
+        const state = {
+            recoil: false,
+            aimbot: false,
+            precision: false,
+            antidetect: true,
+            fov: false,
+            fpsbooster: true,
+            pingred: true,
+            antilag: true,
+            gpuboost: true,
+            paquetepro: false,
+            punteriaestable: false
+        };
+
+        function toggleSwitch(id) {
+            state[id] = !state[id];
+            const btn = document.getElementById('btn-' + id);
+            const dot = document.getElementById('dot-' + id);
+
+            if (btn && dot) {
+                if (state[id]) {
+                    btn.className = "toggle-bg relative inline-flex h-5 w-10 flex-shrink-0 cursor-pointer rounded-full border border-[#ff1a38] bg-[#ff1a38] transition-all";
+                    dot.className = "toggle-dot pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow translate-x-5 translate-y-0.5";
+                } else {
+                    btn.className = "toggle-bg relative inline-flex h-5 w-10 flex-shrink-0 cursor-pointer rounded-full border border-cardBorder bg-[#0f0f13] transition-all";
+                    dot.className = "toggle-dot pointer-events-none inline-block h-4 w-4 transform rounded-full bg-subtext shadow translate-x-0.5 translate-y-0.5";
+                }
+            }
+        }
+
+        function switchTab(tabId) {
+            document.querySelectorAll('.tab-page').forEach(el => el.classList.add('hidden'));
+            document.querySelectorAll('.nav-btn').forEach(btn => btn.classList.remove('active'));
+
+            const target = document.getElementById('tab-' + tabId);
+            const activeBtn = document.getElementById('tab-btn-' + tabId);
+
+            if (target) target.classList.remove('hidden');
+            if (activeBtn) activeBtn.classList.add('active');
+        }
+
+        function setHz(hz) {
+            document.querySelectorAll('.hz-btn').forEach(b => b.classList.remove('active'));
+            const el = document.getElementById('hz-' + hz);
+            if (el) el.classList.add('active');
+            const badge = document.getElementById('current-hz-badge');
+            if (badge) badge.innerText = hz + ' Hz';
+        }
+
+        function setResistencia(tipo) {
+            document.querySelectorAll('.res-card').forEach(c => c.classList.remove('active'));
+            const el = document.getElementById('res-' + tipo);
+            if (el) el.classList.add('active');
+        }
+
+        // Función para copiar códigos de Set Edit V4
+        function copiarCodigosSetEdit() {
+            const textoCodigos = document.getElementById('setedit-codes-box').innerText;
+            navigator.clipboard.writeText(textoCodigos).then(() => {
+                mostrarToast("¡Códigos copiados al portapapeles!");
+            }).catch(() => {
+                const textarea = document.createElement('textarea');
+                textarea.value = textoCodigos;
+                document.body.appendChild(textarea);
+                textarea.select();
+                document.execCommand('copy');
+                document.body.removeChild(textarea);
+                mostrarToast("¡Códigos copiados!");
+            });
+        }
+
+        function mostrarToast(mensaje) {
+            const toast = document.getElementById('toast');
+            toast.innerText = mensaje;
+            toast.classList.remove('opacity-0', 'pointer-events-none');
+            toast.classList.add('opacity-100');
+            setTimeout(() => {
+                toast.classList.remove('opacity-100');
+                toast.classList.add('opacity-0', 'pointer-events-none');
+            }, 2000);
+        }
+    </script>
+</body>
+</html>
